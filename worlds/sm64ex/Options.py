@@ -71,6 +71,7 @@ class BuddyChecks(Toggle):
 class ExclamationBoxes(Choice):
     """Include 1Up Exclamation Boxes during randomization"""
     display_name = "Randomize 1Up !-Blocks"
+    alias_false = 0
     option_Off = 0
     option_1Ups_Only = 1
 
