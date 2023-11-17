@@ -105,7 +105,9 @@ class ProgressiveKeys(DefaultOnToggle):
 
 class RandomizeMoves(Toggle):
     """Mario starts with the ability to jump, punch, and swim, and must unlock all of his other moves.
-    Removes 10 locations from the pool."""
+    Removes 10 locations from the pool.
+    This option will only work if your SM64 client is built with the ap_moverando branch;
+    otherwise, Mario will start with all of his moves."""
     display_name = "Move Randomizer"
 
 
