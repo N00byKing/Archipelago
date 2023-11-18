@@ -165,6 +165,7 @@ class SM64World(World):
             "AreaRando": self.area_connections,
             "RandomizeMoves": self.multiworld.RandomizeMoves[self.player].value,
             "DeathLink": self.multiworld.death_link[self.player].value,
+            "CompletionType" : self.multiworld.CompletionType[self.player].value,
             **self.star_costs
         }
 

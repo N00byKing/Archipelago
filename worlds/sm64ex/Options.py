@@ -97,6 +97,12 @@ class ExclamationBoxes(Choice):
     option_Off = 0
     option_1Ups_Only = 1
 
+class CompletionType(Choice):
+    """Set goal for game completion"""
+    display_name = "Completion Goal"
+    option_Last_Bowser_Stage = 0
+    option_All_Bowser_Stages = 1
+
 
 class ProgressiveKeys(DefaultOnToggle):
     """Keys will first grant you access to the Basement, then to the Second Floor"""
@@ -134,5 +140,7 @@ sm64_options: typing.Dict[str, type(Option)] = {
     "MIPS1Cost": MIPS1Cost,
     "MIPS2Cost": MIPS2Cost,
     "StarsToFinish": StarsToFinish,
-    "death_link": DeathLink
+    "death_link": DeathLink,
+    "ExclamationBoxes": ExclamationBoxes,
+    "CompletionType": CompletionType,
 }
