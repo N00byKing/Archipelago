@@ -97,6 +97,7 @@ class ExclamationBoxes(Choice):
     option_Off = 0
     option_1Ups_Only = 1
 
+
 class CompletionType(Choice):
     """Set goal for game completion"""
     display_name = "Completion Goal"
@@ -141,6 +142,5 @@ sm64_options: typing.Dict[str, type(Option)] = {
     "MIPS2Cost": MIPS2Cost,
     "StarsToFinish": StarsToFinish,
     "death_link": DeathLink,
-    "ExclamationBoxes": ExclamationBoxes,
     "CompletionType": CompletionType,
 }

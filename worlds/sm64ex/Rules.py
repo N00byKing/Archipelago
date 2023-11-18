@@ -198,6 +198,13 @@ def set_rules(world, player: int, area_connections, star_costs):
 
     world.completion_condition[player] = lambda state: state.can_reach("BitS: Top", 'Region', player)
 
+    if world.CompletionType[player] == "last_bowser_stage":
+        world.completion_condition[player] = lambda state: state.can_reach("Bowser in the Sky", 'Region', player)
+    elif world.CompletionType[player] == "all_bowser_stages":
+        world.completion_condition[player] = lambda state: state.can_reach("Bowser in the Dark World", 'Region', player) and \
+                                                           state.can_reach("Bowser in the Fire Sea", 'Region', player) and \
+                                                           state.can_reach("Bowser in the Sky", 'Region', player)
+
 
 class RuleFactory:
 
@@ -281,12 +288,6 @@ class RuleFactory:
         else:
             return True
 
-    if world.CompletionType[player] == "last_bowser_stage":
-        world.completion_condition[player] = lambda state: state.can_reach("Bowser in the Sky", 'Region', player)
-    elif world.CompletionType[player] == "all_bowser_stages":
-        world.completion_condition[player] = lambda state: state.can_reach("Bowser in the Dark World", 'Region', player) and \
-                                                           state.can_reach("Bowser in the Fire Sea", 'Region', player) and \
-                                                           state.can_reach("Bowser in the Sky", 'Region', player)
     def make_lambda(self, expression: str, cannon_name: str) -> Union[Callable, bool]:
         if '+' in expression:
             tokens = expression.split('+')
