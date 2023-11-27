@@ -1,6 +1,6 @@
 import typing
 from Options import Option, DefaultOnToggle, Range, Toggle, DeathLink, Choice
-
+from .Items import action_item_table
 
 class EnableCoinStars(DefaultOnToggle):
     """Disable to Ignore 100 Coin Stars. You can still collect them, but they don't do anything.
@@ -109,24 +109,23 @@ class ProgressiveKeys(DefaultOnToggle):
     """Keys will first grant you access to the Basement, then to the Second Floor"""
     display_name = "Progressive Keys"
 
-
-class RandomizeMoves(Toggle):
-    """Mario starts with the ability to jump, punch, and swim, and must unlock all of his other moves.
-    Removes 10 locations from the pool.
-    This option will only work if your SM64 client is built with the ap_moverando branch;
-    otherwise, Mario will start with all of his moves."""
-    display_name = "Move Randomizer"
-
-
 class StrictMoveRequirements(DefaultOnToggle):
     """If disabled, Stars that expect certain moves may have to be acquired without them. Only makes a difference
     if Move Randomization is enabled"""
     display_name = "Strict Move Requirements"
 
+def getMoveRandomizerOption(action: str):
+    class MoveRandomizerOption(Toggle):
+        f"""Mario is unable to '{action}' until a corresponding item is picked up.
+        Removes 1 location from the pool.
+        This option will only work if your SM64 client is built with the ap_moverando branch;
+        otherwise, Mario will start with all of his moves."""
+        display_name = f"Randomize '{action}'"
+    return MoveRandomizerOption
+
 
 sm64_options: typing.Dict[str, type(Option)] = {
     "AreaRandomizer": AreaRandomizer,
-    "RandomizeMoves": RandomizeMoves,
     "BuddyChecks": BuddyChecks,
     "ExclamationBoxes": ExclamationBoxes,
     "ProgressiveKeys": ProgressiveKeys,
@@ -144,3 +143,8 @@ sm64_options: typing.Dict[str, type(Option)] = {
     "death_link": DeathLink,
     "CompletionType": CompletionType,
 }
+
+for action in action_item_table:
+    # HACK: Disable randomization of double jump
+    if action == 'Double Jump': continue
+    sm64_options[f"MoveRandomizer{action.replace(' ','')}"] = getMoveRandomizerOption(action)

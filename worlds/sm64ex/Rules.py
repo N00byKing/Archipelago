@@ -14,14 +14,14 @@ def fix_reg(entrance_ids, reg, invalidspot, swaplist, world):
             swaplist.append(invalidspot)
             swaplist.remove(rand)
 
-def set_rules(world, player: int, area_connections, star_costs):
+def set_rules(world, player: int, area_connections, star_costs, move_rando_bitvec: int):
     destination_regions = list(range(13)) + [12,13,14] + list(range(15,15+len(sm64secrets))) # Two instances of Destination Course THI. Past normal course idx are secret regions
     secret_entrance_ids = list(range(len(sm64paintings), len(sm64paintings) + len(sm64secrets)))
     course_entrance_ids = list(range(len(sm64paintings)))
     valid_move_randomizer_start_courses = [0, 2, 3, 4, 6, 7, 8, 9]  # Excluding WF, HMC, WDW, TTM, THI, TTC, and RR
     if world.AreaRandomizer[player].value >= 1:  # Some randomization is happening, randomize Courses
         world.random.shuffle(course_entrance_ids)
-        if world.AreaRandomizer[player].value < 3 and world.RandomizeMoves[player]:
+        if world.AreaRandomizer[player].value < 3 and move_rando_bitvec > 0:
             first_course = world.random.choice(valid_move_randomizer_start_courses)
             course_to_swap = course_entrance_ids.index(0)
             course_entrance_ids[first_course], course_entrance_ids[course_to_swap] = 0, course_entrance_ids[first_course]
@@ -33,7 +33,7 @@ def set_rules(world, player: int, area_connections, star_costs):
         world.random.shuffle(entrance_ids)
         # Guarantee first entrance is a course
         swaplist = list(range(len(entrance_ids)))
-        valid_first_courses = valid_move_randomizer_start_courses if world.RandomizeMoves[player] else list(range(15))
+        valid_first_courses = valid_move_randomizer_start_courses if move_rando_bitvec > 0 else list(range(15))
         if entrance_ids.index(0) not in valid_first_courses:  # Unlucky :C
             rand = world.random.choice(valid_first_courses)
             entrance_ids[entrance_ids.index(0)], entrance_ids[rand] = entrance_ids[rand], entrance_ids[entrance_ids.index(0)]
@@ -49,7 +49,7 @@ def set_rules(world, player: int, area_connections, star_costs):
     # Destination Format: LVL | AREA with LVL = LEVEL_x, AREA = Area as used in sm64 code
     area_connections.update({sm64entrances[entrance]: destination for entrance, destination in zip(entrance_ids,sm64entrances)})
 
-    rf = RuleFactory(world, player)
+    rf = RuleFactory(world, player, move_rando_bitvec)
 
     connect_regions(world, player, "Menu", sm64courses[temp_assign[0]]) # BOB
     connect_regions(world, player, "Menu", sm64courses[temp_assign[1]], lambda state: state.has("Power Star", player, 1)) # WF
@@ -210,7 +210,7 @@ class RuleFactory:
 
     world: MultiWorld
     player: int
-    move_randomizer: bool
+    move_rando_bitvec: bool
     area_randomizer: bool
     capless: bool
     cannonless: bool
@@ -235,14 +235,14 @@ class RuleFactory:
     class SM64LogicException(Exception):
         pass
 
-    def __init__(self, world, player):
+    def __init__(self, world, player, move_rando_bitvec):
         self.world = world
         self.player = player
-        self.move_randomizer = world.RandomizeMoves[player]
+        self.move_rando_bitvec = move_rando_bitvec
         self.area_randomizer = world.AreaRandomizer[player].value > 0
         self.capless = not world.StrictCapRequirements[player]
         self.cannonless = not world.StrictCannonRequirements[player]
-        self.moveless = not world.StrictMoveRequirements[player] or not self.move_randomizer
+        self.moveless = not world.StrictMoveRequirements[player] or not move_rando_bitvec > 0
 
     def assign_rule(self, target_name: str, rule_expr: str):
         target = self.world.get_location(target_name, self.player) if target_name in location_table else self.world.get_entrance(target_name, self.player)
@@ -340,8 +340,9 @@ class RuleFactory:
         item = self.token_table.get(token, None)
         if not item:
             raise Exception(f"Invalid token: '{item}'")
-        if not self.move_randomizer and item in action_item_table:
-            # All move items are possessed from the start with MR off
-            return True
+        if item in action_item_table:
+            if self.move_rando_bitvec & (1 << (action_item_table[item] - action_item_table['Double Jump'])) == 0:
+                # This action item is not randomized.
+                return True
         return item
 
