@@ -116,11 +116,10 @@ class StrictMoveRequirements(DefaultOnToggle):
 
 def getMoveRandomizerOption(action: str):
     class MoveRandomizerOption(Toggle):
-        f"""Mario is unable to '{action}' until a corresponding item is picked up.
-        Removes 1 location from the pool.
+        """Mario is unable to perform this action until a corresponding item is picked up.
         This option will only work if your SM64 client is built with the ap_moverando branch;
         otherwise, Mario will start with all of his moves."""
-        display_name = f"Randomize '{action}'"
+        display_name = f"Randomize {action}"
     return MoveRandomizerOption
 
 
