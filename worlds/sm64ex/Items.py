@@ -17,7 +17,8 @@ generic_item_table = {
 }
 
 action_item_table = {
-    "Triple Jump": 3626185,
+    "Double Jump": 3626185,
+    "Triple Jump": 3626186,
     "Long Jump": 3626187,
     "Backflip": 3626188,
     "Side Flip": 3626189,

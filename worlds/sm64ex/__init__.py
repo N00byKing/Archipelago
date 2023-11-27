@@ -43,6 +43,7 @@ class SM64World(World):
     option_definitions = sm64_options
 
     number_of_stars: int
+    move_rando_bitvec: int
     filler_count: int
     star_costs: typing.Dict[str, int]
 
@@ -50,9 +51,14 @@ class SM64World(World):
         max_stars = 120
         if (not self.multiworld.EnableCoinStars[self.player].value):
             max_stars -= 15
-        if (self.multiworld.RandomizeMoves[self.player].value):
-            max_stars -= 10
-            self.multiworld.itempool += [self.create_item(action) for action in action_item_table.keys()]
+        self.move_rando_bitvec = 0
+        for action, itemid in action_item_table.items():
+            # HACK: Disable randomization of double jump
+            if action == 'Double Jump': continue
+            if getattr(self.multiworld, f"MoveRandomizer{action.replace(' ','')}")[self.player].value:
+                max_stars -= 1
+                self.multiworld.itempool.append(self.create_item(action))
+                self.move_rando_bitvec |= (1 << (itemid - action_item_table['Double Jump']))
         if (self.multiworld.ExclamationBoxes[self.player].value > 0):
             max_stars += 29
         self.number_of_stars = min(self.multiworld.AmountOfStars[self.player].value, max_stars)
@@ -75,7 +81,7 @@ class SM64World(World):
 
     def set_rules(self):
         self.area_connections = {}
-        set_rules(self.multiworld, self.player, self.area_connections, self.star_costs)
+        set_rules(self.multiworld, self.player, self.area_connections, self.star_costs, self.move_rando_bitvec)
         if self.topology_present:
             # Write area_connections to spoiler log
             for entrance, destination in self.area_connections.items():
@@ -163,7 +169,7 @@ class SM64World(World):
     def fill_slot_data(self):
         return {
             "AreaRando": self.area_connections,
-            "RandomizeMoves": self.multiworld.RandomizeMoves[self.player].value,
+            "MoveRandoVec": self.move_rando_bitvec,
             "DeathLink": self.multiworld.death_link[self.player].value,
             "CompletionType" : self.multiworld.CompletionType[self.player].value,
             **self.star_costs
