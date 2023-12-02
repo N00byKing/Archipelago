@@ -8,23 +8,42 @@ from .Locations import SM64Location, location_table, locBoB_table, locWhomp_tabl
     locVCutM_table, locBitFS_table, locWMotR_table, locBitS_table, locSS_table
 
 # List of all courses, including secrets, without BitS as that one is static
-sm64courses = ["Bob-omb Battlefield", "Whomp's Fortress", "Jolly Roger Bay", "Cool, Cool Mountain", "Big Boo's Haunt",
-               "Hazy Maze Cave", "Lethal Lava Land", "Shifting Sand Land", "Dire, Dire Docks", "Snowman's Land",
-               "Wet-Dry World", "Tall, Tall Mountain", "Tiny-Huge Island", "Tick Tock Clock", "Rainbow Ride",
-               "The Princess's Secret Slide", "The Secret Aquarium", "Bowser in the Dark World", "Tower of the Wing Cap",
-               "Cavern of the Metal Cap", "Vanish Cap under the Moat", "Bowser in the Fire Sea", "Wing Mario over the Rainbow"]
+# sm64paintings is dict of entrances, format LEVEL | AREA
+sm64_level_to_paintings = {
+     91: "Bob-omb Battlefield",
+    241: "Whomp's Fortress",
+    121: "Jolly Roger Bay",
+     51: "Cool, Cool Mountain",
+     41: "Big Boo's Haunt",
+     71: "Hazy Maze Cave",
+    221: "Lethal Lava Land",
+     81: "Shifting Sand Land",
+    231: "Dire, Dire Docks",
+    101: "Snowman's Land",
+    111: "Wet-Dry World",
+    361: "Tall, Tall Mountain",
+    132: "Tiny-Huge Island (Tiny)",
+    131: "Tiny-Huge Island (Huge)",
+    141: "Tick Tock Clock",
+    151: "Rainbow Ride"
+}
 
-# sm64paintings is list of entrances, format LEVEL | AREA. String Reference below
-sm64paintings   = [91,241,121,51,41,71,221,81,231,101,111,361,132,131,141,151]
-sm64paintings_s = ["BOB", "WF", "JRB", "CCM", "BBH", "HMC", "LLL", "SSL", "DDD", "SL", "WDW", "TTM", "THI Tiny", "THI Huge", "TTC", "RR"]
-# sm64secrets is list of secret areas
-sm64secrets = [271, 201, 171, 291, 281, 181, 191, 311]
-sm64secrets_s = ["PSS", "SA", "BitDW", "TOTWC", "COTMC", "VCUTM", "BitFS", "WMOTR"]
+sm64_paintings_to_level = {painting: level for (level, painting) in sm64_level_to_paintings.items() }
+# sm64secrets is list of secret areas, same format
+sm64_level_to_secrets = {
+    271: "The Princess's Secret Slide",
+    201: "The Secret Aquarium",
+    171: "Bowser in the Dark World",
+    291: "Tower of the Wing Cap",
+    281: "Cavern of the Metal Cap",
+    181: "Vanish Cap under the Moat",
+    191: "Bowser in the Fire Sea",
+    311: "Wing Mario over the Rainbow"
+}
+sm64_secrets_to_level = {secret: level for (level,secret) in sm64_level_to_secrets.items() }
 
-sm64entrances = sm64paintings + sm64secrets
-sm64entrances_s = sm64paintings_s + sm64secrets_s
-sm64_internalloc_to_string = dict(zip(sm64paintings+sm64secrets, sm64entrances_s))
-sm64_internalloc_to_regionid = dict(zip(sm64paintings+sm64secrets, list(range(13)) + [12,13,14] + list(range(15,15+len(sm64secrets)))))
+sm64_entrances_to_level = {**sm64_paintings_to_level, **sm64_secrets_to_level }
+sm64_level_to_entrances = {**sm64_level_to_paintings, **sm64_level_to_secrets }
 
 def create_regions(world: MultiWorld, player: int):
     regSS = Region("Menu", player, world, "Castle Area")
@@ -141,6 +160,8 @@ def create_regions(world: MultiWorld, player: int):
     if (world.EnableCoinStars[player].value):
         create_locs(ttm_top, "TTM: 100 Coins")
 
+    create_region("Tiny-Huge Island (Huge)", player, world)
+    create_region("Tiny-Huge Island (Tiny)", player, world)
     regTHI = create_region("Tiny-Huge Island", player, world)
     create_locs(regTHI, "THI: The Tip Top of the Huge Island", "THI: 1Up Block THI Small near Start")
     thi_pipes = create_subregion(regTHI, "THI: Pipes", "THI: Pluck the Piranha Flower", "THI: Rematch with Koopa the Quick",

@@ -3,88 +3,109 @@ from typing import Callable, Union
 from BaseClasses import MultiWorld
 from ..generic.Rules import add_rule, set_rule
 from .Locations import location_table
-from .Regions import connect_regions, sm64courses, sm64paintings, sm64secrets, sm64entrances
+from .Regions import connect_regions, sm64_level_to_paintings, sm64_paintings_to_level, sm64_level_to_secrets, \
+sm64_level_to_secrets, sm64_entrances_to_level, sm64_level_to_entrances
 from .Items import action_item_table
 
-def fix_reg(entrance_ids, reg, invalidspot, swaplist, world):
-    if entrance_ids.index(reg) == invalidspot: # Unlucky :C
-            swaplist.remove(invalidspot)
-            rand = world.random.choice(swaplist)
-            entrance_ids[invalidspot], entrance_ids[rand] = entrance_ids[rand], entrance_ids[invalidspot]
-            swaplist.append(invalidspot)
-            swaplist.remove(rand)
+def shuffle_dict_keys(world, dictionary: dict) -> dict:
+    keys = list(dictionary.keys())
+    values = list(dictionary.values())
+    world.random.shuffle(keys)
+    return dict(zip(keys, values))
+
+def fix_reg(entrance_map, entrance, destination, swapdict, world):
+    if entrance_map[swapdict[entrance]] == destination: # Unlucky :C
+        rand = world.random.choice(swapdict.keys())
+        entrance_map[entrance], entrance_map[swapdict[rand]] = rand, entrance_map[entrance]
+        swapdict[rand] = entrance_map[entrance]
+        swapdict.pop(entrance)
 
 def set_rules(world, player: int, area_connections, star_costs, move_rando_bitvec: int):
-    destination_regions = list(range(13)) + [12,13,14] + list(range(15,15+len(sm64secrets))) # Two instances of Destination Course THI. Past normal course idx are secret regions
-    secret_entrance_ids = list(range(len(sm64paintings), len(sm64paintings) + len(sm64secrets)))
-    course_entrance_ids = list(range(len(sm64paintings)))
-    valid_move_randomizer_start_courses = [0, 2, 3, 4, 6, 7, 8, 9]  # Excluding WF, HMC, WDW, TTM, THI, TTC, and RR
+    randomized_level_to_paintings = sm64_level_to_paintings.copy()
+    randomized_level_to_secrets = sm64_level_to_secrets.copy()
+    valid_move_randomizer_start_courses = [
+        "Bob-omb Battlefield", "Jolly Roger Bay", "Cool, Cool, Mountain",
+        "Big Boo's Haunt", "Lethal Lava Land", "Shifting Sand Land",
+        "Dire, Dire Docks", "Snowman's Land"
+    ]  # Excluding WF, HMC, WDW, TTM, THI, TTC, and RR
     if world.AreaRandomizer[player].value >= 1:  # Some randomization is happening, randomize Courses
-        world.random.shuffle(course_entrance_ids)
+        randomized_level_to_paintings = shuffle_dict_keys(world,sm64_level_to_paintings)
         if world.AreaRandomizer[player].value < 3 and move_rando_bitvec > 0:
             first_course = world.random.choice(valid_move_randomizer_start_courses)
-            course_to_swap = course_entrance_ids.index(0)
-            course_entrance_ids[first_course], course_entrance_ids[course_to_swap] = 0, course_entrance_ids[first_course]
+            for entrance, painting in randomized_level_to_paintings.items():
+                if painting == first_course:
+                    original_entrance = entrance
+                    break
+            randomized_level_to_paintings[original_entrance] = randomized_level_to_paintings[91]
+            randomized_level_to_paintings[91] = first_course
 
     if world.AreaRandomizer[player].value == 2:  # Randomize Secrets as well
-        world.random.shuffle(secret_entrance_ids)
-    entrance_ids = course_entrance_ids + secret_entrance_ids
+        randomized_level_to_secrets = shuffle_dict_keys(world,sm64_level_to_secrets)
+    randomized_entrances = {**randomized_level_to_paintings, **randomized_level_to_secrets}
     if world.AreaRandomizer[player].value == 3:  # Randomize Courses and Secrets in one pool
-        world.random.shuffle(entrance_ids)
+        randomized_entrances = shuffle_dict_keys(world, randomized_entrances)
         # Guarantee first entrance is a course
-        swaplist = list(range(len(entrance_ids)))
-        valid_first_courses = valid_move_randomizer_start_courses if move_rando_bitvec > 0 else list(range(15))
-        if entrance_ids.index(0) not in valid_first_courses:  # Unlucky :C
+        swapdict = {entrance: level for (level, entrance) in randomized_entrances.items()}
+        valid_first_courses = valid_move_randomizer_start_courses if move_rando_bitvec > 0 else list(sm64_paintings_to_level.keys())
+        if randomized_entrances[91] not in valid_first_courses:  # Unlucky :C
             rand = world.random.choice(valid_first_courses)
-            entrance_ids[entrance_ids.index(0)], entrance_ids[rand] = entrance_ids[rand], entrance_ids[entrance_ids.index(0)]
-            swaplist.remove(entrance_ids.index(0))
+            randomized_entrances[91], randomized_entrances[swapdict[rand]] = rand, randomized_entrances[91]
+            swapdict[rand] = randomized_entrances[91]
+        swapdict.pop("Bob-omb Battlefield")
         # Guarantee COTMC is not mapped to HMC, cuz thats impossible
-        fix_reg(entrance_ids, 20, 5, swaplist, world)
+        fix_reg(randomized_entrances, "Cavern of the Metal Cap", "Hazy Maze Cave", swapdict, world)
         # Guarantee BITFS is not mapped to DDD
-        fix_reg(entrance_ids, 22, 8, swaplist, world)
-        if entrance_ids.index(22) == 5: # If BITFS is mapped to HMC...
-            fix_reg(entrance_ids, 20, 8, swaplist, world) # ... then dont allow COTMC to be mapped to DDD
-    temp_assign = dict(zip(entrance_ids,destination_regions)) # Used for Rules only
+        fix_reg(randomized_entrances, "Bowser in the Fire Sea", "Dire, Dire Docks", swapdict, world)
+        if randomized_entrances[191] == "Hazy Maze Cave": # If BITFS is mapped to HMC...
+            fix_reg(randomized_entrances, "Cavern of the Metal Cap", "Dire, Dire Docks", swapdict, world) # ... then dont allow COTMC to be mapped to DDD
 
     # Destination Format: LVL | AREA with LVL = LEVEL_x, AREA = Area as used in sm64 code
-    area_connections.update({sm64entrances[entrance]: destination for entrance, destination in zip(entrance_ids,sm64entrances)})
+    area_connections.update({entrance_lvl: sm64_entrances_to_level[destination] for (entrance_lvl,destination) in randomized_entrances.items()})
+    randomized_entrances_s = {sm64_level_to_entrances[entrance_lvl]: destination for (entrance_lvl,destination) in randomized_entrances.items()}
 
     rf = RuleFactory(world, player, move_rando_bitvec)
 
-    connect_regions(world, player, "Menu", sm64courses[temp_assign[0]]) # BOB
-    connect_regions(world, player, "Menu", sm64courses[temp_assign[1]], lambda state: state.has("Power Star", player, 1)) # WF
-    connect_regions(world, player, "Menu", sm64courses[temp_assign[2]], lambda state: state.has("Power Star", player, 3)) # JRB
-    connect_regions(world, player, "Menu", sm64courses[temp_assign[3]], lambda state: state.has("Power Star", player, 3)) # CCM
-    connect_regions(world, player, "Menu", sm64courses[temp_assign[4]], lambda state: state.has("Power Star", player, 12)) # BBH
-    connect_regions(world, player, "Menu", sm64courses[temp_assign[16]], lambda state: state.has("Power Star", player, 1)) # PSS
-    connect_regions(world, player, sm64courses[temp_assign[2]], sm64courses[temp_assign[17]], rf.build_rule("SF/BF | TJ & LG | MOVELESS & TJ")) # SA
-    connect_regions(world, player, "Menu", sm64courses[temp_assign[19]], lambda state: state.has("Power Star", player, 10)) # TOTWC
-    connect_regions(world, player, "Menu", sm64courses[temp_assign[18]], lambda state: state.has("Power Star", player, star_costs["FirstBowserDoorCost"])) # BITDW
+    connect_regions(world, player, "Menu", randomized_entrances_s["Bob-omb Battlefield"])
+    connect_regions(world, player, "Menu", randomized_entrances_s["Whomp's Fortress"], lambda state: state.has("Power Star", player, 1))
+    connect_regions(world, player, "Menu", randomized_entrances_s["Jolly Roger Bay"], lambda state: state.has("Power Star", player, 3))
+    connect_regions(world, player, "Menu", randomized_entrances_s["Cool, Cool Mountain"], lambda state: state.has("Power Star", player, 3))
+    connect_regions(world, player, "Menu", randomized_entrances_s["Big Boo's Haunt"], lambda state: state.has("Power Star", player, 12))
+    connect_regions(world, player, "Menu", randomized_entrances_s["The Princess's Secret Slide"], lambda state: state.has("Power Star", player, 1))
+    connect_regions(world, player, randomized_entrances_s["Jolly Roger Bay"], randomized_entrances_s["The Secret Aquarium"],
+                    rf.build_rule("SF/BF | TJ & LG | MOVELESS & TJ"))
+    connect_regions(world, player, "Menu", randomized_entrances_s["Tower of the Wing Cap"], lambda state: state.has("Power Star", player, 10))
+    connect_regions(world, player, "Menu", randomized_entrances_s["Bowser in the Dark World"],
+                    lambda state: state.has("Power Star", player, star_costs["FirstBowserDoorCost"]))
 
     connect_regions(world, player, "Menu", "Basement", lambda state: state.has("Basement Key", player) or state.has("Progressive Key", player, 1))
 
-    connect_regions(world, player, "Basement", sm64courses[temp_assign[5]]) # HMC
-    connect_regions(world, player, "Basement", sm64courses[temp_assign[6]]) # LLL
-    connect_regions(world, player, "Basement", sm64courses[temp_assign[7]]) # SSL
-    connect_regions(world, player, "Basement", sm64courses[temp_assign[8]], lambda state: state.has("Power Star", player, star_costs["BasementDoorCost"])) # DDD
-    connect_regions(world, player, "Hazy Maze Cave", sm64courses[temp_assign[20]]) # COTMC
-    connect_regions(world, player, "Basement", sm64courses[temp_assign[21]], rf.build_rule("GP")) # VCUTM
-    connect_regions(world, player, "Basement", sm64courses[temp_assign[22]], lambda state: state.has("Power Star", player, star_costs["BasementDoorCost"]) and
-                                                                                       state.can_reach("DDD: Board Bowser's Sub", 'Location', player)) # BITFS
+    connect_regions(world, player, "Basement", randomized_entrances_s["Hazy Maze Cave"])
+    connect_regions(world, player, "Basement", randomized_entrances_s["Lethal Lava Land"])
+    connect_regions(world, player, "Basement", randomized_entrances_s["Shifting Sand Land"])
+    connect_regions(world, player, "Basement", randomized_entrances_s["Dire, Dire Docks"],
+                    lambda state: state.has("Power Star", player, star_costs["BasementDoorCost"]))
+    connect_regions(world, player, "Hazy Maze Cave", randomized_entrances_s["Cavern of the Metal Cap"])
+    connect_regions(world, player, "Basement", randomized_entrances_s["Vanish Cap under the Moat"])
+    connect_regions(world, player, "Basement", randomized_entrances_s["Bowser in the Fire Sea"],
+                    lambda state: state.has("Power Star", player, star_costs["BasementDoorCost"]) and
+                                  state.can_reach("DDD: Board Bowser's Sub", 'Location', player))
 
     connect_regions(world, player, "Menu", "Second Floor", lambda state: state.has("Second Floor Key", player) or state.has("Progressive Key", player, 2))
 
-    connect_regions(world, player, "Second Floor", sm64courses[temp_assign[9]]) # SL
-    connect_regions(world, player, "Second Floor", sm64courses[temp_assign[10]]) # WDW
-    connect_regions(world, player, "Second Floor", sm64courses[temp_assign[11]]) # TTM
-    connect_regions(world, player, "Second Floor", sm64courses[temp_assign[12]]) # THI Tiny
-    connect_regions(world, player, "Second Floor", sm64courses[temp_assign[13]]) # THI Huge
+    connect_regions(world, player, "Second Floor", randomized_entrances_s["Snowman's Land"])
+    connect_regions(world, player, "Second Floor", randomized_entrances_s["Wet-Dry World"])
+    connect_regions(world, player, "Second Floor", randomized_entrances_s["Tall, Tall Mountain"])
+    connect_regions(world, player, "Second Floor", randomized_entrances_s["Tiny-Huge Island (Tiny)"])
+    connect_regions(world, player, "Second Floor", randomized_entrances_s["Tiny-Huge Island (Huge)"])
+    connect_regions(world, player, "Tiny-Huge Island (Tiny)", "Tiny-Huge Island")
+    connect_regions(world, player, "Tiny-Huge Island (Huge)", "Tiny-Huge Island")
 
     connect_regions(world, player, "Second Floor", "Third Floor", lambda state: state.has("Power Star", player, star_costs["SecondFloorDoorCost"]))
-    connect_regions(world, player, "Third Floor", sm64courses[temp_assign[14]], rf.build_rule("LG/TJ/SF/BF/WK")) # TTC
-    connect_regions(world, player, "Third Floor", sm64courses[temp_assign[15]], rf.build_rule("TJ/SF/BF")) # RR
-    connect_regions(world, player, "Third Floor", sm64courses[temp_assign[23]], rf.build_rule("TJ/SF/BF")) # WMOTR
-    connect_regions(world, player, "Third Floor", "Bowser in the Sky", lambda state: state.has("Power Star", player, star_costs["StarsToFinish"])) # BITS
+
+    connect_regions(world, player, "Third Floor", randomized_entrances_s["Tick Tock Clock"])
+    connect_regions(world, player, "Third Floor", randomized_entrances_s["Rainbow Ride"])
+    connect_regions(world, player, "Third Floor", randomized_entrances_s["Wing Mario over the Rainbow"])
+    connect_regions(world, player, "Third Floor", "Bowser in the Sky", lambda state: state.has("Power Star", player, star_costs["StarsToFinish"]))
 
     # Course Rules
     # Bob-omb Battlefield
