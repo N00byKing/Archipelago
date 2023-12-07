@@ -7,8 +7,7 @@ from .Locations import SM64Location, location_table, locBoB_table, locWhomp_tabl
     locPSS_table, locSA_table, locBitDW_table, locTotWC_table, locCotMC_table, \
     locVCutM_table, locBitFS_table, locWMotR_table, locBitS_table, locSS_table
 
-# List of all courses, including secrets, without BitS as that one is static
-# sm64paintings is dict of entrances, format LEVEL | AREA
+# sm64paintings is a dict of entrances, format LEVEL | AREA
 sm64_level_to_paintings = {
      91: "Bob-omb Battlefield",
     241: "Whomp's Fortress",
@@ -27,9 +26,9 @@ sm64_level_to_paintings = {
     141: "Tick Tock Clock",
     151: "Rainbow Ride"
 }
-
 sm64_paintings_to_level = {painting: level for (level, painting) in sm64_level_to_paintings.items() }
-# sm64secrets is list of secret areas, same format
+
+# sm64secrets is a dict of secret areas, same format as sm64paintings
 sm64_level_to_secrets = {
     271: "The Princess's Secret Slide",
     201: "The Secret Aquarium",
