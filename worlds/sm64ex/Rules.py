@@ -1,10 +1,10 @@
-from typing import Callable, Union
+from typing import Callable, Union, Dict, Set
 
 from BaseClasses import MultiWorld
 from ..generic.Rules import add_rule, set_rule
 from .Locations import location_table
 from .Regions import connect_regions, sm64_level_to_paintings, sm64_paintings_to_level, sm64_level_to_secrets, \
-sm64_level_to_secrets, sm64_entrances_to_level, sm64_level_to_entrances
+sm64_level_to_secrets, sm64_entrances_to_level, sm64_level_to_entrances, Entrances
 from .Items import action_item_table
 
 def shuffle_dict_keys(world, dictionary: dict) -> dict:
@@ -13,18 +13,21 @@ def shuffle_dict_keys(world, dictionary: dict) -> dict:
     world.random.shuffle(keys)
     return dict(zip(keys, values))
 
-def fix_reg(entrance_map, entrance, destination, swapdict, world):
-    if entrance_map[swapdict[entrance]] == destination: # Unlucky :C
-        rand = world.random.choice(swapdict.keys())
-        entrance_map[entrance], entrance_map[swapdict[rand]] = rand, entrance_map[entrance]
-        swapdict[rand] = entrance_map[entrance]
-        swapdict.pop(entrance)
+def fix_reg(entrance_map: Dict[Entrances, str], entrance: Entrances, destination: str,
+            swapdict: Dict[str, Entrances], world, invalid_regions: Set[str] = {}):
+    if entrance_map[entrance] == destination: # Unlucky :C
+        replacement_regions = [(rand_region, rand_entrance) for rand_region, rand_entrance in swapdict.items()
+                               if rand_region not in invalid_regions and rand_region != destination]
+        rand_region, rand_entrance = world.random.choice(replacement_regions)
+        entrance_map[entrance], entrance_map[rand_entrance] = rand_region, destination
+        swapdict[rand_region] = entrance
+        swapdict.pop(destination)
 
 def set_rules(world, player: int, area_connections: dict, star_costs: dict, move_rando_bitvec: int):
     randomized_level_to_paintings = sm64_level_to_paintings.copy()
     randomized_level_to_secrets = sm64_level_to_secrets.copy()
     valid_move_randomizer_start_courses = [
-        "Bob-omb Battlefield", "Jolly Roger Bay", "Cool, Cool, Mountain",
+        "Bob-omb Battlefield", "Jolly Roger Bay", "Cool, Cool Mountain",
         "Big Boo's Haunt", "Lethal Lava Land", "Shifting Sand Land",
         "Dire, Dire Docks", "Snowman's Land"
     ]  # Excluding WF, HMC, WDW, TTM, THI, TTC, and RR
@@ -33,8 +36,8 @@ def set_rules(world, player: int, area_connections: dict, star_costs: dict, move
         if world.AreaRandomizer[player].value < 3 and move_rando_bitvec > 0:
             first_course = world.random.choice(valid_move_randomizer_start_courses)
             original_entrance = next(entrance for entrance, painting in randomized_level_to_paintings.items() if painting == first_course)
-            randomized_level_to_paintings[original_entrance] = randomized_level_to_paintings[91]
-            randomized_level_to_paintings[91] = first_course
+            randomized_level_to_paintings[original_entrance] = randomized_level_to_paintings[Entrances.BOB_OMB_BATTLEFIELD]
+            randomized_level_to_paintings[Entrances.BOB_OMB_BATTLEFIELD] = first_course
 
     if world.AreaRandomizer[player].value == 2:  # Randomize Secrets as well
         randomized_level_to_secrets = shuffle_dict_keys(world,sm64_level_to_secrets)
@@ -44,20 +47,22 @@ def set_rules(world, player: int, area_connections: dict, star_costs: dict, move
         # Guarantee first entrance is a course
         swapdict = {entrance: level for (level, entrance) in randomized_entrances.items()}
         valid_first_courses = valid_move_randomizer_start_courses if move_rando_bitvec > 0 else list(sm64_paintings_to_level.keys())
-        if randomized_entrances[91] not in valid_first_courses:  # Unlucky :C
+        first_course = randomized_entrances[Entrances.BOB_OMB_BATTLEFIELD]
+        if first_course not in valid_first_courses:  # Unlucky :C
             rand = world.random.choice(valid_first_courses)
-            randomized_entrances[91], randomized_entrances[swapdict[rand]] = rand, randomized_entrances[91]
-            swapdict[rand] = randomized_entrances[91]
-        swapdict.pop("Bob-omb Battlefield")
+            rand_entrance = swapdict[rand]
+            randomized_entrances[Entrances.BOB_OMB_BATTLEFIELD], randomized_entrances[rand_entrance] = rand, first_course
+            swapdict.pop(rand)
+            swapdict[first_course] = rand_entrance
         # Guarantee COTMC is not mapped to HMC, cuz thats impossible
-        fix_reg(randomized_entrances, "Cavern of the Metal Cap", "Hazy Maze Cave", swapdict, world)
+        fix_reg(randomized_entrances, Entrances.CAVERN_OF_THE_METAL_CAP, "Hazy Maze Cave", swapdict, world)
         # Guarantee BITFS is not mapped to DDD
-        fix_reg(randomized_entrances, "Bowser in the Fire Sea", "Dire, Dire Docks", swapdict, world)
-        if randomized_entrances[191] == "Hazy Maze Cave": # If BITFS is mapped to HMC...
-            fix_reg(randomized_entrances, "Cavern of the Metal Cap", "Dire, Dire Docks", swapdict, world) # ... then dont allow COTMC to be mapped to DDD
+        fix_reg(randomized_entrances, Entrances.BOWSER_IN_THE_FIRE_SEA, "Dire, Dire Docks", swapdict, world)
+        if randomized_entrances[Entrances.BOWSER_IN_THE_FIRE_SEA] == "Hazy Maze Cave": # If BITFS is mapped to HMC...
+            fix_reg(randomized_entrances, Entrances.CAVERN_OF_THE_METAL_CAP, "Dire, Dire Docks", swapdict, world, {"Hazy Maze Cave"}) # ... then dont allow COTMC to be mapped to DDD
 
     # Destination Format: LVL | AREA with LVL = LEVEL_x, AREA = Area as used in sm64 code
-    area_connections.update({entrance_lvl: sm64_entrances_to_level[destination] for (entrance_lvl,destination) in randomized_entrances.items()})
+    area_connections.update({int(entrance_lvl): int(sm64_entrances_to_level[destination]) for (entrance_lvl,destination) in randomized_entrances.items()})
     randomized_entrances_s = {sm64_level_to_entrances[entrance_lvl]: destination for (entrance_lvl,destination) in randomized_entrances.items()}
 
     rf = RuleFactory(world, player, move_rando_bitvec)
