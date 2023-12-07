@@ -20,7 +20,7 @@ def fix_reg(entrance_map, entrance, destination, swapdict, world):
         swapdict[rand] = entrance_map[entrance]
         swapdict.pop(entrance)
 
-def set_rules(world, player: int, area_connections, star_costs, move_rando_bitvec: int):
+def set_rules(world, player: int, area_connections: dict, star_costs: dict, move_rando_bitvec: int):
     randomized_level_to_paintings = sm64_level_to_paintings.copy()
     randomized_level_to_secrets = sm64_level_to_secrets.copy()
     valid_move_randomizer_start_courses = [
