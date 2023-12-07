@@ -32,10 +32,7 @@ def set_rules(world, player: int, area_connections: dict, star_costs: dict, move
         randomized_level_to_paintings = shuffle_dict_keys(world,sm64_level_to_paintings)
         if world.AreaRandomizer[player].value < 3 and move_rando_bitvec > 0:
             first_course = world.random.choice(valid_move_randomizer_start_courses)
-            for entrance, painting in randomized_level_to_paintings.items():
-                if painting == first_course:
-                    original_entrance = entrance
-                    break
+            original_entrance = next(entrance for entrance, painting in randomized_level_to_paintings.items() if painting == first_course)
             randomized_level_to_paintings[original_entrance] = randomized_level_to_paintings[91]
             randomized_level_to_paintings[91] = first_course
 
