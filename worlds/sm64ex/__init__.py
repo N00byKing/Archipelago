@@ -102,23 +102,27 @@ class SM64World(World):
 
         return item
 
-    def generate_basic(self):
+    def create_items(self):
+        # 1Up Mushrooms
+        preplaced_count = 29 if self.multiworld.ExclamationBoxes[self.player].value == 0 else 0
+        self.multiworld.itempool += [self.create_item("1Up Mushroom") for i in range(0,self.filler_count - preplaced_count)]
+        # Power Stars
         self.multiworld.itempool += [self.create_item("Power Star") for i in range(0,self.number_of_stars)]
+        # Keys
         if (not self.multiworld.ProgressiveKeys[self.player].value):
             key1 = self.create_item("Basement Key")
             key2 = self.create_item("Second Floor Key")
             self.multiworld.itempool += [key1, key2]
         else:
             self.multiworld.itempool += [self.create_item("Progressive Key") for i in range(0,2)]
-
-        wingcap = self.create_item("Wing Cap")
-        metalcap = self.create_item("Metal Cap")
-        vanishcap = self.create_item("Vanish Cap")
-        self.multiworld.itempool += [wingcap, metalcap, vanishcap]
-
+        # Caps
+        self.multiworld.itempool += [self.create_item(cap_name) for cap_name in ["Wing Cap", "Metal Cap", "Vanish Cap"]]
+        # Cannons
         if (self.multiworld.BuddyChecks[self.player].value):
             self.multiworld.itempool += [self.create_item(name) for name, id in cannon_item_table.items()]
-        else:
+
+    def generate_basic(self):
+        if not (self.multiworld.BuddyChecks[self.player].value):
             self.multiworld.get_location("BoB: Bob-omb Buddy", self.player).place_locked_item(self.create_item("Cannon Unlock BoB"))
             self.multiworld.get_location("WF: Bob-omb Buddy", self.player).place_locked_item(self.create_item("Cannon Unlock WF"))
             self.multiworld.get_location("JRB: Bob-omb Buddy", self.player).place_locked_item(self.create_item("Cannon Unlock JRB"))
@@ -130,9 +134,7 @@ class SM64World(World):
             self.multiworld.get_location("THI: Bob-omb Buddy", self.player).place_locked_item(self.create_item("Cannon Unlock THI"))
             self.multiworld.get_location("RR: Bob-omb Buddy", self.player).place_locked_item(self.create_item("Cannon Unlock RR"))
 
-        if (self.multiworld.ExclamationBoxes[self.player].value > 0):
-            self.multiworld.itempool += [self.create_item("1Up Mushroom") for i in range(0,self.filler_count)]
-        else:
+        if (self.multiworld.ExclamationBoxes[self.player].value == 0):
             self.multiworld.get_location("CCM: 1Up Block Near Snowman", self.player).place_locked_item(self.create_item("1Up Mushroom"))
             self.multiworld.get_location("CCM: 1Up Block Ice Pillar", self.player).place_locked_item(self.create_item("1Up Mushroom"))
             self.multiworld.get_location("CCM: 1Up Block Secret Slide", self.player).place_locked_item(self.create_item("1Up Mushroom"))
