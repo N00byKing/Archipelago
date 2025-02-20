@@ -35,7 +35,8 @@ class BSWorld(World):
     item_name_to_id = item_table
     location_name_to_id = location_table
 
-    area_connections: typing.Dict[int, int]
+    node_layers: typing.Dict[int, typing.Set[int]]
+    node_connections: typing.Dict[int, typing.Set[int]]
     area_cost_map: typing.Dict[int,int]
 
     music_map: typing.Dict[int,int]
@@ -50,9 +51,9 @@ class BSWorld(World):
         create_regions(self.multiworld, self.player)
 
     def set_rules(self):
-        self.area_connections = {}
-        self.area_cost_map = {}
-        set_rules(self.multiworld, self.options, self.player, self.area_connections, self.area_cost_map)
+        self.node_connections = {}
+        self.node_layers = {}
+        set_rules(self.multiworld, self.options, self.player, self.node_connections, self.node_layers)
 
     def create_item(self, name: str, classification: ItemClassification = ItemClassification.filler) -> Item:
         return BSItem(name, classification, item_table[name], self.player)
@@ -63,9 +64,10 @@ class BSWorld(World):
 
     def generate_basic(self):
         self.campaign_name = f"AP Campaign, Seed {self.multiworld.seed_name}"
-        track_possibilities = [ 0x43A2E, 0x43A5D, 0x43A1F, 0x29715, 0x3c89, 0x4C6, 0x198F3 ]
+        track_possibilities = list(set([ 0x43A2E, 0x43A5D, 0x43A1F, 0x29715, 0x3C89, 0x4C6, 0x198F3 ]))
+        self.multiworld.random.shuffle(track_possibilities)
         for i in range(self.options.num_tracks):
-            track = self.multiworld.random.choice(track_possibilities)
+            track = track_possibilities[i]
             self.song_to_id[track] = i
             self.id_to_song[i] = track
         for i in range(self.options.num_tracks, 50):
@@ -96,55 +98,55 @@ class BSWorld(World):
         }
 
         # Nodes
-        nodes = {}
-        child_nodes = {
-            0: [1, 2],
-            1: [],
-            2: []
-        }
-        for i in range(self.options.num_tracks):
-            # Write meta info to info.json
-            node_meta_info = {
-                "childNodes": child_nodes[i],
-                "x": 0,
-                "y": i*100,
-                "scale": 0.9,
-                "letterPortion": f"Song{i}",
-                "numberPortion": -1
-            }
-            info_json["mapPositions"].append(node_meta_info)
+        nodes_json = {}
+        node_distance_horizontal = 60
+        for layer in range(len(self.node_layers)):
+            layer_width = len(self.node_layers[layer]) * node_distance_horizontal
+            layer_start = -0.5 * layer_width # Center around 0, start from left, increment to right
+            for i in range(len(self.node_layers[layer])):
+                loc_id = self.node_layers[layer][i]
+                # Write meta info to info.json
+                locname = f"Track{loc_id}"
+                node_meta_info = {
+                    "childNodes": self.node_connections[loc_id],
+                    "x":  layer_start + node_distance_horizontal * i,
+                    "y": layer*80,
+                    "scale": 0.9,
+                    "letterPortion": locname,
+                    "numberPortion": -1
+                }
+                info_json["mapPositions"].append(node_meta_info)
 
-            # Write node info
-            node_json = {
-                "name": f"Song{i}",
-                "songid": f'{self.id_to_song[i]:x}',
-                "characteristic": "Standard",
-                "difficulty": 4,
-                "modifiers": {
-                    "fastNotes": False,
-                    "songSpeed": 0,
-                    "noBombs": False,
-                    "disappearingArrows": False,
-                    "strictAngles": False,
-                    "noObstacles": False,
-                    "batteryEnergy": False,
-                    "failOnSaberClash": False,
-                    "instaFail": False,
-                    "noFail": False,
-                    "noArrows": False,
-                    "ghostNotes": False,
-                    "energyType": 0,
-                    "enabledObstacleType": 0,
-                    "speedMul": 1.0
-                },
-                "requirements": [],
-                "externalModifiers": {},
-                "challengeInfo": None,
-                "unlockableItems": [],
-                "unlockMap": False
-            }
-            nodes[i] = node_json
-
+                # Write node info
+                node_json = {
+                    "name": locname,
+                    "songid": f'{self.id_to_song[loc_id]:x}',
+                    "characteristic": "Standard",
+                    "difficulty": 4,
+                    "modifiers": {
+                        "fastNotes": False,
+                        "songSpeed": 0,
+                        "noBombs": False,
+                        "disappearingArrows": False,
+                        "strictAngles": False,
+                        "noObstacles": False,
+                        "batteryEnergy": False,
+                        "failOnSaberClash": False,
+                        "instaFail": False,
+                        "noFail": False,
+                        "noArrows": False,
+                        "ghostNotes": False,
+                        "energyType": 0,
+                        "enabledObstacleType": 0,
+                        "speedMul": 1.0
+                    },
+                    "requirements": [],
+                    "externalModifiers": {},
+                    "challengeInfo": None,
+                    "unlockableItems": [],
+                    "unlockMap": False
+                }
+                nodes_json[self.node_layers[layer][i]] = node_json
         # Write zipfile
         folder_prefix = f"AP_{self.multiworld.seed_name}"
         file_path = f"{self.multiworld.get_out_file_name_base(self.player)}.zip"
@@ -155,8 +157,8 @@ class BSWorld(World):
                 data = pkgutil.get_data(__name__, "data/" + name)
                 return data
             coverimg = load_data("cover.png")
-            bkgimg = load_data("map background.png")
+            #bkgimg = load_data("map background.png")
             zf.writestr(f"{folder_prefix}/cover.png", coverimg)
-            zf.writestr(f"{folder_prefix}/map background.png", bkgimg)
+            #zf.writestr(f"{folder_prefix}/map background.png", bkgimg)
             for i in range(self.options.num_tracks):
-                zf.writestr(f"{folder_prefix}/{i}.json", json.dumps(nodes[i]))
+                zf.writestr(f"{folder_prefix}/{i}.json", json.dumps(nodes_json[i]))
