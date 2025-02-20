@@ -9,6 +9,8 @@ class NumTracks(Range):
     range_end = 50
     default = 3
 
+#TODO: Option for starting map type (Onesaber, 360, etc)
+
 @dataclass
 class BSOptions(PerGameCommonOptions):
     num_tracks: NumTracks
