@@ -3,6 +3,7 @@ import os, json
 import zipfile
 from .Items import item_table, BSItem
 from .Locations import location_table, BSLocation
+from .CampainLayout import generate_campain_layout
 from .Options import BSOptions
 from .Rules import set_rules
 from .Regions import create_regions
@@ -33,7 +34,6 @@ class BSWorld(World):
 
     node_layers: typing.Dict[int, typing.Set[int]]
     node_connections: typing.Dict[int, typing.Set[int]]
-    area_cost_map: typing.Dict[int,int]
 
     music_map: typing.Dict[int,int]
 
@@ -47,21 +47,28 @@ class BSWorld(World):
         create_regions(self.multiworld, self.player)
 
     def set_rules(self):
-        self.node_connections = {}
-        self.node_layers = {}
         set_rules(self.multiworld, self.options, self.player, self.node_connections, self.node_layers)
 
     def create_item(self, name: str, classification: ItemClassification = ItemClassification.filler) -> Item:
         return BSItem(name, classification, item_table[name], self.player)
+    
+    def generate_early(self):
+        self.node_connections = {}
+        self.node_layers = {}
+        generate_campain_layout(self.options, self.multiworld.random, self.node_connections, self.node_layers)
 
     def create_items(self):
-        songsUnlocks = [self.create_item("Song " + str(i+1).zfill(2), ItemClassification.progression) for i in range(self.options.num_tracks-1)]
-        filler = Item("Nothing", ItemClassification.filler, -1, self.player)
-        self.multiworld.itempool += songsUnlocks + [filler]
+        songUnlocks = []
+        for i in range(1,self.options.num_tracks):
+            if not i in list(self.node_connections[0]):
+                songUnlocks.append(self.create_item("Song " + str(i).zfill(2), ItemClassification.progression))
+        #TODO: nice filler items
+        filler = [Item("Nothing", ItemClassification.filler, -1, self.player) for i in range(self.options.num_tracks - len(songUnlocks))]
+        self.multiworld.itempool += songUnlocks + filler
 
     def generate_basic(self):
         self.campaign_name = f"AP Campaign, Seed {self.multiworld.seed_name}"
-        track_possibilities = list(set([ 0x43A2E, 0x43A5D, 0x43A1F, 0x29715, 0x3C89, 0x4C6, 0x198F3 ]))
+        track_possibilities = list(set([ 0x43A2E, 0x43A5D, 0x43A1F, 0x29715, 0x3C89, 0x4C6, 0x198F3, 0x1F90, 0x16ABF ]))
         self.multiworld.random.shuffle(track_possibilities)
         for i in range(self.options.num_tracks):
             track = track_possibilities[i]
