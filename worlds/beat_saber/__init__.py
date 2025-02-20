@@ -105,7 +105,7 @@ class BSWorld(World):
         for i in range(self.options.num_tracks):
             # Write meta info to info.json
             node_meta_info = {
-                "childNotes": child_nodes[i],
+                "childNodes": child_nodes[i],
                 "x": 0,
                 "y": i*100,
                 "scale": 0.9,
