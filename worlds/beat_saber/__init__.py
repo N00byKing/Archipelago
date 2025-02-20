@@ -9,9 +9,6 @@ from .Regions import create_regions
 from BaseClasses import Item, ItemClassification, Tutorial
 from ..AutoWorld import World, WebWorld
 
-client_version = 1
-
-
 class BSWeb(WebWorld):
     tutorials = [Tutorial(
         "Multiworld Setup Guide",
@@ -21,7 +18,6 @@ class BSWeb(WebWorld):
         "setup/en",
         ["N00byKing"]
     )]
-
 
 class BSWorld(World):
     """ 
@@ -44,8 +40,8 @@ class BSWorld(World):
     options_dataclass = BSOptions
 
     campaign_name: str
-    song_to_id: typing.Dict[int,int] = {}
-    id_to_song: typing.Dict[int,int] = {}
+    mapid_to_node: typing.Dict[int,int] = {}
+    node_to_mapid: typing.Dict[int,int] = {}
 
     def create_regions(self):
         create_regions(self.multiworld, self.player)
@@ -59,8 +55,9 @@ class BSWorld(World):
         return BSItem(name, classification, item_table[name], self.player)
 
     def create_items(self):
-        progtrinkets = [self.create_item("Song " + str(i+1).zfill(2), ItemClassification.progression) for i in range(self.options.num_tracks)]
-        self.multiworld.itempool += progtrinkets
+        songsUnlocks = [self.create_item("Song " + str(i+1).zfill(2), ItemClassification.progression) for i in range(self.options.num_tracks-1)]
+        filler = Item("Nothing", ItemClassification.filler, -1, self.player)
+        self.multiworld.itempool += songsUnlocks + [filler]
 
     def generate_basic(self):
         self.campaign_name = f"AP Campaign, Seed {self.multiworld.seed_name}"
@@ -68,16 +65,18 @@ class BSWorld(World):
         self.multiworld.random.shuffle(track_possibilities)
         for i in range(self.options.num_tracks):
             track = track_possibilities[i]
-            self.song_to_id[track] = i
-            self.id_to_song[i] = track
+            self.mapid_to_node[track] = i
+            self.node_to_mapid[i] = track
         for i in range(self.options.num_tracks, 50):
-            self.multiworld.get_location("Track " + f"{i}".zfill(2), self.player).place_locked_item(Item("Nothing", ItemClassification.filler, -1, self.player))
+            self.multiworld.get_location("Node " + f"{i}".zfill(2), self.player).place_locked_item(Item("Nothing", ItemClassification.filler, -1, self.player))
 
     def fill_slot_data(self):
         return {
             "DeathLink": self.options.death_link.value,
-            "song_to_id": self.song_to_id,
-            "campaign_name": self.campaign_name
+            "node_to_mapid": self.node_to_mapid,
+            "mapid_to_node": self.mapid_to_node,
+            "campaign_name": self.campaign_name,
+            "start_song": self.node_to_mapid[0]
         }
 
     def generate_output(self, output_directory: str):
@@ -120,7 +119,7 @@ class BSWorld(World):
                 # Write node info
                 node_json = {
                     "name": locname,
-                    "songid": f'{self.id_to_song[loc_id]:x}',
+                    "songid": f'{self.node_to_mapid[loc_id]:x}',
                     "characteristic": "Standard",
                     "difficulty": 4,
                     "modifiers": {
