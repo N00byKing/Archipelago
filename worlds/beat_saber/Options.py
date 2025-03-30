@@ -6,54 +6,54 @@ from schema import Schema, And, Or, Use, Optional, SchemaError
 class NumTracks(Range):
     """Amount of Tracks to require"""
     display_name = "Number of Tracks"
-    range_start = 3
+    range_start = 5 # Require 5 at minimum to ensure > 1 layer
     range_end = 50
-    default = 3
+    default = 5
 
 #TODO: Items for starting map type (Onesaber, etc)
 default_songs = {
     "[Extra Sensory II] Xtrullor - Ego Death": {
-        "mapid": 0x43A2E,
+        "mapid": "43A2E",
         "difficulty": 4,
         "characteristic": "Standard"
     },
     "[Extra Sensory II] RXLZQ - Through The Screen": {
-        "mapid": 0x43A5D,
+        "mapid": "43A5D",
         "difficulty": 4,
         "characteristic": "Standard"
     },
     "[Extra Sensory II] Simplifi - you": {
-        "mapid": 0x43A1F,
+        "mapid": "43A1F",
         "difficulty": 2,
         "characteristic": "Standard"
     },
     "[RANKED] DJ Genki - Introduction": {
-        "mapid": 0x29715,
+        "mapid": "29715",
         "difficulty": 4,
         "characteristic": "Standard"
     },
     "99.9 // Mob Choir feat. Sajou no Hana": {
-        "mapid": 0x3C89,
+        "mapid": "3C89",
         "difficulty": 4,
         "characteristic": "Standard"
     },
     "Muse - Uprising": {
-        "mapid": 0x4C6,
+        "mapid": "4C6",
         "difficulty": 3,
         "characteristic": "Standard"
     },
     "Spider Dance - Toby Fox (Undertale modchart)": {
-        "mapid": 0x198F3,
+        "mapid": "198F3",
         "difficulty": 4,
         "characteristic": "Standard"
     },
     "RIOT - Overkill": {
-        "mapid": 0x1F90,
+        "mapid": "1F90",
         "difficulty": 4,
         "characteristic": "Standard"
     },
     "Avicii - The Nights": {
-        "mapid": 0x16ABF,
+        "mapid": "16ABF",
         "difficulty": 4,
         "characteristic": "Standard"
     },
@@ -64,7 +64,7 @@ class Songs(OptionDict):
     default = default_songs
     schema = Schema({
         str: {
-            "mapid": int,
+            "mapid": str,
             "difficulty": And(Use(int), lambda n: 1 <= 4),
             "characteristic": And(Use(str), lambda s: s in ("Standard", "OneSaber")),
         }

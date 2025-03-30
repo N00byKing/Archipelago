@@ -1,7 +1,7 @@
 import typing
 import os, json
 import zipfile
-from .Items import item_table, BSItem
+from .Items import item_table, item_data_table, BSItem
 from .Locations import location_table, BSLocation
 from .CampainLayout import generate_campain_layout
 from .Options import BSOptions
@@ -51,9 +51,9 @@ class BSWorld(World):
     def set_rules(self):
         set_rules(self.multiworld, self.options, self.player, self.node_connections, self.node_layers)
 
-    def create_item(self, name: str, classification: ItemClassification = ItemClassification.filler) -> Item:
-        return BSItem(name, classification, item_table[name], self.player)
-    
+    def create_item(self, name: str) -> Item:
+        return BSItem(name, item_data_table[name].classification, item_data_table[name].code, self.player)
+
     def generate_early(self):
         self.node_connections = {}
         self.node_layers = {}
@@ -63,7 +63,7 @@ class BSWorld(World):
         songUnlocks = []
         for i in range(1,self.options.num_tracks):
             if not i in list(self.node_connections[0]):
-                songUnlocks.append(self.create_item("Song " + str(i).zfill(2), ItemClassification.progression))
+                songUnlocks.append(self.create_item("Song " + str(i).zfill(2)))
         #TODO: nice filler items
         filler = [Item("Nothing", ItemClassification.filler, -1, self.player) for i in range(self.options.num_tracks - len(songUnlocks))]
         self.multiworld.itempool += songUnlocks + filler
@@ -127,7 +127,7 @@ class BSWorld(World):
                 # Write node info
                 node_json = {
                     "name": locname,
-                    "songid": f'{self.options.songs[self.node_to_songident[loc_id]]["mapid"]:x}',
+                    "songid": self.options.songs[self.node_to_songident[loc_id]]["mapid"],
                     "characteristic": self.options.songs[self.node_to_songident[loc_id]]["characteristic"],
                     "difficulty": self.options.songs[self.node_to_songident[loc_id]]["difficulty"],
                     "modifiers": {

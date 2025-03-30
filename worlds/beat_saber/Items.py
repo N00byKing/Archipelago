@@ -1,8 +1,22 @@
-from BaseClasses import Item
+from typing import NamedTuple
+from BaseClasses import Item, ItemClassification
 
 class BSItem(Item):
     game: str = "Beat Saber"
 
-bs_id_offset = 140400
-item_table = { "Song " + f"{i}".zfill(2) : bs_id_offset + i for i in range(1, 50) } # Must start at 1, Song0 is root node, always available
-item_table["Nothing"] = bs_id_offset # Instead, use id 0 for "Nothing" filler TODO replace with cooler filler
+class BSItemData(NamedTuple):
+    code: int | None = None
+    classification: ItemClassification = ItemClassification.progression
+
+song_table = { "Song " + f"{i}".zfill(2) : BSItemData(i) for i in range(1, 50) } # Must start at 1, Song0 is root node, always available
+
+filler_table = {
+    "Nothing": BSItemData(0, ItemClassification.filler)
+}
+
+item_data_table = {
+    **song_table,
+    **filler_table
+}
+
+item_table = {name: data.code for name, data in item_data_table.items() if data.code is not None}
