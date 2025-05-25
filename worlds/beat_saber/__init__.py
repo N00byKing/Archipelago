@@ -42,8 +42,9 @@ class BSWorld(World):
     options_dataclass = BSOptions
 
     campaign_name: str
-    songident_to_node: typing.Dict[str,int] = {}
-    node_to_songident: typing.Dict[int,str] = {}
+    keystr_to_node: typing.Dict[str,int] = {}
+    node_to_keystr: typing.Dict[int,str] = {}
+    processed_songs = {}
 
     def create_regions(self):
         create_regions(self.multiworld, self.player)
@@ -59,6 +60,10 @@ class BSWorld(World):
         self.node_layers = {}
         generate_campain_layout(self.options, self.multiworld.random, self.node_connections, self.node_layers)
 
+        for name, data in self.options.songs.items():
+            keystr = data["levelid"] + "_" + data["characteristic"] + "_" + str(data["difficulty"])
+            self.processed_songs[keystr] = data
+
     def create_items(self):
         songUnlocks = []
         for i in range(1,self.options.num_tracks):
@@ -70,21 +75,21 @@ class BSWorld(World):
 
     def generate_basic(self):
         self.campaign_name = f"AP Campaign, Seed {self.multiworld.seed_name}"
-        self.songshuffle = list(self.options.songs.keys())
+        self.songshuffle = list(self.processed_songs.keys())
         self.multiworld.random.shuffle(self.songshuffle)
         for i in range(self.options.num_tracks):
-            self.songident_to_node[self.songshuffle[i]] = i
-            self.node_to_songident[i] = self.songshuffle[i]
+            self.keystr_to_node[list(self.processed_songs)[i]] = i
+            self.node_to_keystr[i] = list(self.processed_songs)[i]
         for i in range(self.options.num_tracks, 50):
             self.multiworld.get_location("Node " + f"{i}".zfill(2), self.player).place_locked_item(Item("Nothing", ItemClassification.filler, -1, self.player))
 
     def fill_slot_data(self):
         return {
             "DeathLink": self.options.death_link.value,
-            "node_to_songident": self.node_to_songident,
-            "songident_to_node": self.songident_to_node,
+            "node_to_keystr": self.node_to_keystr,
+            "keystr_to_node": self.keystr_to_node,
             "campaign_name": self.campaign_name,
-            "start_songs": [self.node_to_songident[0]] + [self.node_to_songident[i] for i in self.node_connections[0]]
+            "start_songs": [self.node_to_keystr[0]] + [self.node_to_keystr[i] for i in self.node_connections[0]]
         }
 
     def generate_output(self, output_directory: str):
@@ -127,9 +132,9 @@ class BSWorld(World):
                 # Write node info
                 node_json = {
                     "name": locname,
-                    "songid": self.options.songs[self.node_to_songident[loc_id]]["mapid"],
-                    "characteristic": self.options.songs[self.node_to_songident[loc_id]]["characteristic"],
-                    "difficulty": self.options.songs[self.node_to_songident[loc_id]]["difficulty"],
+                    "songid": self.processed_songs[self.node_to_keystr[loc_id]]["levelid"],
+                    "characteristic": self.processed_songs[self.node_to_keystr[loc_id]]["characteristic"],
+                    "difficulty": self.processed_songs[self.node_to_keystr[loc_id]]["difficulty"],
                     "modifiers": {
                         "fastNotes": False,
                         "songSpeed": 0,
