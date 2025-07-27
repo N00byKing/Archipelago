@@ -65,7 +65,7 @@ class Songs(OptionDict):
     schema = Schema({
         str: {
             "levelid": str,
-            "difficulty": And(Use(int), lambda n: 1 <= 4),
+            "difficulty": And(Use(int), lambda n: 0 <= n <= 4),
             "characteristic": And(Use(str), lambda s: s in ("Standard", "OneSaber")),
         }
     })
