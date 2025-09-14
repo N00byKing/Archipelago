@@ -23,6 +23,6 @@ def set_rules(multiworld, options, player, node_connections: typing.Dict[int, ty
         # For every node but root, the track item is required
         if node == 0 or node in node_connections[0]: continue
         __add_song_rule(multiworld, player, node)
-    # Winning condition: Beat campaing, so all songs currently.
+    # Winning condition: Beat campaign, so all songs currently.
     #TODO: Need to designate final node or smth
     multiworld.completion_condition[player] = lambda state: __completion_condition(state, player, options, node_connections)
